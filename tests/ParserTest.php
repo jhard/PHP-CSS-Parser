@@ -131,6 +131,14 @@ class ParserTest extends TestCase
                     'g' => new Size(34.0, null, true, $oColor->getLineNo()),
                     'b' => new Size(34.0, null, true, $oColor->getLineNo()),
                 ], $oColor->getColor());
+               $aColorRule = $oRuleSet->getRules('accent-color');
+               $oColor = $aColorRule[0]->getValue();
+               self::assertEquals([
+                                     'r' => new Size(10.0, null, true, $oColor->getLineNo()),
+                                     'g' => new Size(100.0, null, true, $oColor->getLineNo()),
+                                     'b' => new Size(232.0, null, true, $oColor->getLineNo()),
+                                     'a' => new Size("0000.4", null, true, $oColor->getLineNo()),
+                                  ], $oColor->getColor());
             } elseif ($sSelector === '#yours') {
                 $aColorRule = $oRuleSet->getRules('background-color');
                 $oColor = $aColorRule[0]->getValue();
@@ -153,7 +161,7 @@ class ParserTest extends TestCase
         }
         self::assertSame(
             '#mine {color: red;border-color: #0a64e6;border-color: rgba(10,100,231,.3);outline-color: #222;'
-            . 'background-color: #232323;}'
+            . 'background-color: #232323;accent-color: rgba(10,100,232,.4);}'
             . "\n"
             . '#yours {background-color: hsl(220,10%,220%);background-color: hsla(220,10%,220%,.3);}'
             . "\n"

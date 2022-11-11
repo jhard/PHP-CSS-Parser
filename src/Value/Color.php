@@ -69,6 +69,11 @@ class Color extends CSSFunction
             $oParserState->consume('(');
 
             $bContainsVar = false;
+            $isNewRgb = false;
+            if ( preg_match("!^\s*\d+\s*\d+\s*\d+\s*/\s*\d+!", $oParserState->peek(30)) ) {
+               $isNewRgb = true;
+               $sColorMode = "rgba";
+            }
             $iLength = $oParserState->strlen($sColorMode);
             for ($i = 0; $i < $iLength; ++$i) {
                 $oParserState->consumeWhiteSpace();
@@ -85,7 +90,10 @@ class Color extends CSSFunction
                 }
 
                 $oParserState->consumeWhiteSpace();
-                if ($i < ($iLength - 1)) {
+                if($isNewRgb && $i === 2) {
+                   $oParserState->consume('/');
+                }
+                if (!$isNewRgb && $i < ($iLength - 1)) {
                     $oParserState->consume(',');
                 }
             }
