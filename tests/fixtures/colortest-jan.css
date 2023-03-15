@@ -1,0 +1,3 @@
+#variablesNew {
+    background-color: rgb(var(--r) var(--g) var(--b) / var(--a));
+}

@@ -15,7 +15,7 @@ class Color extends CSSFunction
 {
     /**
      * @param array<int, RuleValueList|CSSFunction|CSSString|LineName|Size|URL|string> $aColor
-     * @param int $iLineNo
+     * @param int                                                                      $iLineNo
      */
     public function __construct(array $aColor, $iLineNo = 0)
     {
@@ -24,10 +24,8 @@ class Color extends CSSFunction
 
     /**
      * @param ParserState $oParserState
-     * @param bool $bIgnoreCase
-     *
+     * @param bool        $bIgnoreCase
      * @return Color|CSSFunction
-     *
      * @throws UnexpectedEOFException
      * @throws UnexpectedTokenException
      */
@@ -39,9 +37,9 @@ class Color extends CSSFunction
             $sValue = $oParserState->parseIdentifier(false);
             if ($oParserState->strlen($sValue) === 3) {
                 $sValue = $sValue[0] . $sValue[0] . $sValue[1] . $sValue[1] . $sValue[2] . $sValue[2];
-            } elseif ($oParserState->strlen($sValue) === 4) {
+            } else if ($oParserState->strlen($sValue) === 4) {
                 $sValue = $sValue[0] . $sValue[0] . $sValue[1] . $sValue[1] . $sValue[2] . $sValue[2] . $sValue[3]
-                    . $sValue[3];
+                          . $sValue[3];
             }
 
             if ($oParserState->strlen($sValue) === 8) {
@@ -67,16 +65,26 @@ class Color extends CSSFunction
             $sColorMode = $oParserState->parseIdentifier(true);
             $oParserState->consumeWhiteSpace();
             $oParserState->consume('(');
-
-            $bContainsVar = false;
+            $bContainsVar     = false;
+            $isNewRgb         = false;
+            $colorDefinition  = $oParserState->peek(300);
+            if (
+                $sColorMode === "rgb"
+                && preg_match(
+                    "!^\s*(\d+|var\s*\(.*?\))\s*(\d+|var\(.*?\))\s*(\d+|var\(.*?\))\s*/\s*([0-9.]+|var\(.*?\))!",
+                    $colorDefinition, $matches
+                )) {
+                $isNewRgb   = true;
+                $sColorMode = "rgba";
+            }
             $iLength = $oParserState->strlen($sColorMode);
             for ($i = 0; $i < $iLength; ++$i) {
                 $oParserState->consumeWhiteSpace();
                 if ($oParserState->comes('var')) {
-                    $aColor[$sColorMode[$i]] = CSSFunction::parseIdentifierOrFunction($oParserState);
-                    $bContainsVar = true;
+                    $aColor[ $sColorMode[ $i ] ] = CSSFunction::parseIdentifierOrFunction($oParserState);
+                    $bContainsVar                = true;
                 } else {
-                    $aColor[$sColorMode[$i]] = Size::parse($oParserState, true);
+                    $aColor[ $sColorMode[ $i ] ] = Size::parse($oParserState, true);
                 }
 
                 if ($bContainsVar && $oParserState->comes(')')) {
@@ -85,7 +93,10 @@ class Color extends CSSFunction
                 }
 
                 $oParserState->consumeWhiteSpace();
-                if ($i < ($iLength - 1)) {
+                if ($isNewRgb && $i === 2) {
+                    $oParserState->consume('/');
+                }
+                if (!$isNewRgb && $i < ( $iLength - 1 )) {
                     $oParserState->consume(',');
                 }
             }
@@ -96,52 +107,6 @@ class Color extends CSSFunction
             }
         }
         return new Color($aColor, $oParserState->currentLine());
-    }
-
-    /**
-     * @param float $fVal
-     * @param float $fFromMin
-     * @param float $fFromMax
-     * @param float $fToMin
-     * @param float $fToMax
-     *
-     * @return float
-     */
-    private static function mapRange($fVal, $fFromMin, $fFromMax, $fToMin, $fToMax)
-    {
-        $fFromRange = $fFromMax - $fFromMin;
-        $fToRange = $fToMax - $fToMin;
-        $fMultiplier = $fToRange / $fFromRange;
-        $fNewVal = $fVal - $fFromMin;
-        $fNewVal *= $fMultiplier;
-        return $fNewVal + $fToMin;
-    }
-
-    /**
-     * @return array<int, RuleValueList|CSSFunction|CSSString|LineName|Size|URL|string>
-     */
-    public function getColor()
-    {
-        return $this->aComponents;
-    }
-
-    /**
-     * @param array<int, RuleValueList|CSSFunction|CSSString|LineName|Size|URL|string> $aColor
-     *
-     * @return void
-     */
-    public function setColor(array $aColor)
-    {
-        $this->setName(implode('', array_keys($aColor)));
-        $this->aComponents = $aColor;
-    }
-
-    /**
-     * @return string
-     */
-    public function getColorDescription()
-    {
-        return $this->getName();
     }
 
     /**
@@ -165,9 +130,54 @@ class Color extends CSSFunction
                 $this->aComponents['g']->getSize(),
                 $this->aComponents['b']->getSize()
             );
-            return '#' . (($sResult[0] == $sResult[1]) && ($sResult[2] == $sResult[3]) && ($sResult[4] == $sResult[5])
-                    ? "$sResult[0]$sResult[2]$sResult[4]" : $sResult);
+            return '#' . ( ( $sResult[0] == $sResult[1] ) && ( $sResult[2] == $sResult[3] )
+                           && ( $sResult[4] == $sResult[5] )
+                    ? "$sResult[0]$sResult[2]$sResult[4]" : $sResult );
         }
         return parent::render($oOutputFormat);
+    }
+
+    /**
+     * @param float $fVal
+     * @param float $fFromMin
+     * @param float $fFromMax
+     * @param float $fToMin
+     * @param float $fToMax
+     * @return float
+     */
+    private static function mapRange($fVal, $fFromMin, $fFromMax, $fToMin, $fToMax)
+    {
+        $fFromRange  = $fFromMax - $fFromMin;
+        $fToRange    = $fToMax - $fToMin;
+        $fMultiplier = $fToRange / $fFromRange;
+        $fNewVal     = $fVal - $fFromMin;
+        $fNewVal     *= $fMultiplier;
+        return $fNewVal + $fToMin;
+    }
+
+    /**
+     * @return array<int, RuleValueList|CSSFunction|CSSString|LineName|Size|URL|string>
+     */
+    public function getColor()
+    {
+        return $this->aComponents;
+    }
+
+    /**
+     * @param array<int, RuleValueList|CSSFunction|CSSString|LineName|Size|URL|string> $aColor
+     * @return void
+     */
+    public function setColor(array $aColor)
+    {
+        $this->setName(implode('', array_keys($aColor)));
+        $this->aComponents = $aColor;
+    }
+
+    /**
+     * @return string
+     */
+    public function getColorDescription()
+    {
+        return $this->getName();
     }
 }
